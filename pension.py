@@ -100,6 +100,7 @@ def calculate_pension_colab(current_age, balance, monthly_dep, annual_return_pct
 # הרצת החישוב
 calculate_pension_colab(גיל_נוכחי, צבירה_קיימת, הפקדה_חודשית, תשואה_שנתית_אחוזים, אינפלציה_שנתית_חזויה, מקדם_אקטוארי_חזוי)
 
+
 # @title מחשבון פנסיה מתקדם - פרישה בגיל 67 (תיקון עברית סופי + פירוט מלא)
 import matplotlib.pyplot as plt
 import numpy as np
@@ -200,24 +201,6 @@ def calculate_pension_colab(current_age, balance, monthly_dep, annual_return_pct
     plt.show()
 
 calculate_pension_colab(גיל_נוכחי, צבירה_קיימת, הפקדה_חודשית, תשואה_שנתית_אחוזים, אינפלציה_שנתית_חזויה, מקדם_אקטוארי_חזוי)
-
-"""# Task
-Update the `calculate_pension_colab` function to include a sensitivity analysis while maintaining all existing features. Specifically:
-1.  **Maintain Outputs**: Keep the detailed printed summary (pension fund, NI, taxes, inflation effects) and the two existing charts: the accumulation stackplot (Principal vs. Interest) and the colored pie chart for monthly income distribution.
-2.  **Add Sensitivity Analysis**: Include a third subplot showing the "Real Net Pension" (at retirement age) across a range of annual inflation rates (1.5% to 3.0%).
-3.  **Variable Comparison**: Plot multiple lines for different actuarial coefficients (200, 210, 215, 220) and highlight the user's specific choice (e.g., 203.2) in a distinct style.
-4.  **Visual Indicators**: Add a vertical line at the user's current inflation rate (e.g., 1.9%) to the sensitivity chart.
-5.  **Localization**: Ensure all new titles, legends, and labels are processed through the `fix_heb` function to display Hebrew correctly.
-6.  **Verification**: Execute the code to confirm that all three charts and the full calculation summary are displayed correctly in the notebook.
-
-## Update Pension Calculator with Sensitivity Analysis
-
-### Subtask:
-Modify the `calculate_pension_colab` function to include a new sensitivity analysis plot while preserving existing logic and visualizations.
-
-**Reasoning**:
-I will update the `calculate_pension_colab` function to include a third subplot for sensitivity analysis, which compares 'Real Net Pension' against varying inflation rates for different actuarial coefficients, while maintaining the existing calculations and visualizations.
-"""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -340,13 +323,6 @@ def calculate_pension_colab(current_age, balance, monthly_dep, annual_return_pct
 
 calculate_pension_colab(גיל_נוכחי, צבירה_קיימת, הפקדה_חודשית, תשואה_שנתית_אחוזים, אינפלציה_שנתית_חזויה, מקדם_אקטוארי_חזוי)
 
-"""**Reasoning**:
-I will update the `calculate_pension_colab` function to include a third subplot for sensitivity analysis, which compares 'Real Net Pension' against varying inflation rates for different actuarial coefficients, while maintaining the existing calculations and visualizations.
-
-
-"""
-
-!pip install -q arabic-reshaper python-bidi
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -498,7 +474,7 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 
 # תצורה בסיסית של העמוד
-st.set_page_config(page_title="מחשבון פנסיה מתקדם", layout="wide")
+#st.set_page_config(page_title="מחשבון פנסיה מתקדם", layout="wide")
 
 # פונקציית עזר לתיקון עברית בגרפים
 def fix_heb(text):
@@ -617,84 +593,21 @@ def calculate_pension(current_age, balance, monthly_dep, annual_return_pct, infl
 # הפעלה
 calculate_pension(גיל_נוכחי, צבירה_קיימת, הפקדה_חודשית, תשואה_שנתית_אחוזים, אינפלציה_שנתית_חזויה, מקדם_אקטוארי_חזוי, דמי_בריאות_חודשיים, קצבת_ביטוח_לאומי)
 
-"""### קוד לדוגמה עבור אפליקציית Streamlit
-כדי להפוך את המחשבון לאתר, התקן את streamlit בעזרת `pip install streamlit` והשתמש במבנה הבא:
-"""
 
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 # שים לב: באפליקציית WEB חיצונית מומלץ להשתמש בגופנים שתומכים בעברית מובנית במקום arabic_reshaper אם אפשר
 
-st.title("מחשבון פנסיה מתקדם")
+#st.title("מחשבון פנסיה מתקדם")
 
 # יצירת סרגל צד לנתונים
-with st.sidebar:
-    st.header("נתוני כניסה")
-    current_age = st.number_input("גיל נוכחי", value=46)
-    balance = st.number_input("צבירה קיימת", value=1800000)
-    monthly_dep = st.number_input("הפקדה חודשית", value=7800)
+#with st.sidebar:
+#    st.header("נתוני כניסה")
+#    current_age = st.number_input("גיל נוכחי", value=46, key=1)
+#    balance = st.number_input("צבירה קיימת", value=1800000, key=2)
+#    monthly_dep = st.number_input("הפקדה חודשית", value=7800, key=3)
     # ... שאר הפרמטרים באותו אופן
 
 # כאן מכניסים את הלוגיקה של הפונקציה calculate_pension_colab
 # ובמקום plt.show() משתמשים ב-st.pyplot(fig)
-
-"""## Final Task
-
-### Subtask:
-Verify that all three charts and the detailed calculation summary are displayed correctly in the notebook.
-
-"""
-
-pip install streamlit
-
-"""## Summary:
-
-### Q&A
-
-**How does the updated function account for different economic scenarios?**
-The function now includes a sensitivity analysis that plots the "Real Net Pension" against a range of annual inflation rates (1.5% to 3.0%). It also compares multiple actuarial coefficients (200, 210, 215, 220) against the user's specific input to show how different conversion factors and inflation levels impact future purchasing power.
-
-**What specific financial components are included in the monthly distribution breakdown?**
-The analysis calculates and identifies four main components: the net pension fund, National Insurance (NI) benefits, estimated income tax, and health tax.
-
-### Data Analysis Key Findings
-
-*   **Future Value Projections**: For a 46-year-old with a current balance of 1,800,000 \$₪ and monthly deposits of 7,800 \$₪ at a 4.5% annual return, the total accumulation at age 67 is calculated and visualized as a stackplot of principal versus interest.
-*   **Monthly Income Composition**: The gross monthly income is broken down into its constituent parts, where the "Net Pension" typically forms the largest segment, supplemented by a standard National Insurance benefit of 2,300 \$₪.
-*   **Inflation Sensitivity**: The analysis reveals that even small changes in inflation (between 1.5% and 3.0%) significantly impact the "Real Net" value (current purchasing power) of the pension, as shown in the new sensitivity subplot.
-*   **Actuarial Impact**: By plotting lines for different coefficients (200–220), the model demonstrates how the conversion factor affects the monthly payout; the user's specific coefficient (e.g., 203.2) is highlighted to show exactly where they stand relative to these benchmarks.
-*   **Taxation Logic**: The model accurately reflects Israeli tax brackets for pensioners, applying a 10% tax on the first 6,790 \$₪ of taxable income (above the 4,500 \$₪ exemption), 14% on the next bracket, and 20% thereafter, while accounting for standard credit points (570 \$₪ reduction).
-
-### Insights or Next Steps
-
-*   **Next Step**: Consider adding a "Success Probability" or "Monte Carlo" simulation to the tool to account for market volatility rather than assuming a fixed 4.5% annual return.
-*   **Insight**: The sensitivity analysis highlights that the actuarial coefficient and inflation rate are just as critical to retirement quality of life as the total accumulated sum; a higher-than-expected inflation rate can erode purchasing power more significantly than a slight underperformance in market returns.
-
-# Task
-Provide a summary of the retirement calculator's features: yield sensitivity analysis, colored expense distribution, and inflation impact analysis. Ensure all components are working harmoniously in the final code cell, including the installation of "arabic-reshaper" and "python-bidi" to handle Hebrew localization in the charts.
-
-## Final Task
-
-### Subtask:
-Integrate all pension calculator features, install required Hebrew localization libraries, and provide a summary of the tool's capabilities.
-
-## Summary:
-
-### Q&A
-
-**What are the primary capabilities of the final retirement calculator?**
-The tool integrates three core financial analysis modules: yield sensitivity analysis, colored expense distribution, and inflation impact assessments. It is designed to handle complex pension calculations while supporting full Hebrew localization for text and chart labels using specialized libraries.
-
-### Data Analysis Key Findings
-
-*   **Yield Sensitivity Analysis:** The model demonstrates how variations in investment returns significantly alter the retirement nest egg. Even a small \$1\%\$ increase in annual yield can lead to a exponential growth in the final balance over a 30-40 year horizon.
-*   **Inflation Impact:** Analysis shows that a constant inflation rate (e.g., \$2-3\%\$) drastically reduces purchasing power over time. The tool visualizes the "Real Value" vs. "Nominal Value" of savings, highlighting that a million-dollar portfolio today may only cover half the living expenses in 30 years.
-*   **Expense Distribution:** The categorized expense modeling identifies that housing and healthcare typically constitute the largest percentages of post-retirement spending, allowing for better-targeted savings goals.
-*   **Hebrew Localization:** By successfully integrating `arabic-reshaper` and `python-bidi`, the tool ensures that RTL (Right-to-Left) text is rendered correctly in Matplotlib charts, making the data accessible to Hebrew-speaking users.
-
-### Insights or Next Steps
-
-*   **Implement Monte Carlo Simulations:** To move beyond static yield sensitivity, the next step should involve running stochastic simulations to provide a probability-based "Success Rate" for the retirement plan under various market conditions.
-*   **Dynamic Tax Integration:** Incorporating local tax brackets and pension-specific tax exemptions would provide a more accurate "Net" monthly income forecast for the user.
-"""
