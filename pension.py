@@ -100,8 +100,6 @@ def calculate_pension_colab(current_age, balance, monthly_dep, annual_return_pct
 # הרצת החישוב
 calculate_pension_colab(גיל_נוכחי, צבירה_קיימת, הפקדה_חודשית, תשואה_שנתית_אחוזים, אינפלציה_שנתית_חזויה, מקדם_אקטוארי_חזוי)
 
-!pip install arabic-reshaper python-bidi
-
 # @title מחשבון פנסיה מתקדם - פרישה בגיל 67 (תיקון עברית סופי + פירוט מלא)
 import matplotlib.pyplot as plt
 import numpy as np
