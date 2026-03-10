@@ -1,4 +1,3 @@
-
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
@@ -145,22 +144,24 @@ def calculate_pension(current_age, balance, monthly_dep, annual_return_pct, infl
     inflations = np.linspace(1.5, 3.0, 10)
     for c in [200, 210, 215, 220]:
         nets = [get_net_pension(future_balance, c, i)[5] for i in inflations]
-        line, = ax3.plot(inflations, nets, label=f"{fix_heb('מקדם')} {c}", alpha=0.5)
+        line, = ax3.plot(inflations, nets, label=f"{c} - {fix_heb('מקדם')}", alpha=0.5)
         ax3.text(inflations[-1], nets[-1], f" {c}", color=line.get_color(), va='center')
     user_nets = [get_net_pension(future_balance, manual_coefficient, i)[5] for i in inflations]
     ax3.plot(inflations, user_nets, color='red', linewidth=3, linestyle='--')
     ax3.axvline(x=inflation_pct, color='black', linestyle=':')
-    ax3.set_title(fix_heb("רגישות: קצבה ריאלית מול אינפלציה"))
+    ax3.set_title(fix_heb("רגישות: קצבה ריאלית מול אינפלציה (רגישות למקדם)"))
+    ax3.legend()
 
     # גרף 4: תשואה
     yield_range_fine = np.linspace(annual_return_pct - 1.5, annual_return_pct + 1.5, 20)
     for inf in [1.5, 2.0, 2.5, 3.0]:
         is_target = np.isclose(inf, inflation_pct, atol=0.25)
         y_real_nets = [get_net_pension(get_trajectory(y_pct)[0][-1], manual_coefficient, inf)[5] for y_pct in yield_range_fine]
-        line, = ax4.plot(yield_range_fine, y_real_nets, label=f"{inf}%", linewidth=3 if is_target else 1)
+        line, = ax4.plot(yield_range_fine, y_real_nets, label=f"{inf}% - {fix_heb('אינפלציה שנתית ממוצעת')}", linewidth=3 if is_target else 1)
         ax4.text(yield_range_fine[-1], y_real_nets[-1], f" {inf}%", color=line.get_color(), va='center')
     ax4.axvline(x=annual_return_pct, color='black', linestyle='--')
-    ax4.set_title(fix_heb("רגישות: קצבה ריאלית מול תשואה (לפי אינפלציה)"))
+    ax4.set_title(fix_heb("רגישות: קצבה ריאלית מול תשואה (רדישות לאינפלציה)"))
+    ax4.legend()
 
     plt.tight_layout()
     st.pyplot(fig)
