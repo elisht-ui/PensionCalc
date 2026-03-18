@@ -1,49 +1,90 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 import numpy as np
-import arabic_reshaper
-from bidi.algorithm import get_display
+import pandas as pd
+import altair as alt
 from datetime import datetime
+import streamlit.components.v1 as components
 
-# תצורה בסיסית של העמוד
-#st.set_page_config(page_title="מחשבון פנסיה מתקדם", layout="wide")
+# Basic page configuration
+st.set_page_config(page_title="Advanced Pension Calculator", layout="wide")
 
-# פונקציית עזר לתיקון עברית בגרפים
-def fix_heb(text):
-    if not text: return text
-    reshaped_text = arabic_reshaper.reshape(str(text))
-    return get_display(reshaped_text)
 
-st.title("מחשבון פנסיה מתקדם")
+def calculate_coefficient(current_age: int) -> float:
+    current_year = datetime.now().year
+    return 201.81 * (1 + 0.149 * (current_year - 2024 + (67 - current_age)) / 100)
 
-def calc_Coeff(current_age):
-    return (201.81*(1+0.149*(datetime.now().year - 2024 + (67-current_age))/100))
 
-# יצירת סרגל צד להזנת נתונים
+# Sidebar for data entry
 with st.sidebar:
     st.header("נתוני כניסה")
-    curr_Age = st.number_input("גיל נוכחי", value=46)
-    curr_Fund_Total = st.number_input("צבירה קיימת (₪)", value=1800000)
-    monthly_Deposit = st.number_input("הפקדה חודשית (₪)", value=7800)
-    year_Yield = st.slider("תשואה שנתית (%) ", 0.0, 10.0, 4.5)
-    inflation = st.slider("אינפלציה שנתית (%) ", 0.0, 5.0, 1.9)
-    projected_Coeff = st.number_input("מקדם אקטוארי", value=calc_Coeff(curr_Age))
-    health_Tax = st.number_input("דמי בריאות (₪)", value=237)
-    national_Security = st.number_input("קצבת ביטוח לאומי (₪)", value=2300)
+    current_age = st.number_input("גיל נוכחי", value=46)
+    current_fund_total = st.number_input("צבירה קיימת (₪)", value=1800000)
+    monthly_deposit = st.number_input("הפקדה חודשית (₪)", value=7800)
+    annual_yield = st.slider("תשואה שנתית (%) ", 0.0, 10.0, 4.5, 0.1)
+    inflation_rate = st.slider("אינפלציה שנתית (%) ", 0.0, 5.0, 1.9)
+    projected_coefficient = st.number_input(
+        "מקדם אקטוארי", value=calculate_coefficient(current_age)
+    )
+    health_tax = st.number_input("דמי בריאות (₪)", value=237)
+    national_insurance = st.number_input("קצבת ביטוח לאומי (₪)", value=2300)
 
-st.title(f" פרישה בגיל 67, גיל נוכחי {curr_Age}")
 
-# פונקציית החישוב המרכזית
-def calculate_pension(current_age, balance, monthly_dep, annual_return_pct, inflation_pct, manual_coefficient, health_tax_input, ni_benefit):
+def set_rtl_direction():
+    """Sets the document direction to Right-to-Left (RTL) natively in the DOM,
+    and ensures charts remain LTR to prevent visual layout bugs."""
+    components.html(
+        """
+        <script>
+            const parentDoc = window.parent.document;
+            parentDoc.documentElement.dir = "rtl";
+            
+            // Inject CSS to keep Streamlit charts in LTR
+            if (!parentDoc.getElementById("fix-charts-ltr")) {
+                const style = parentDoc.createElement("style");
+                style.id = "fix-charts-ltr";
+                style.innerHTML = `
+                    [data-testid="stArrowVegaLiteChart"], 
+                    [data-testid="stVegaLiteChart"],
+                    [data-baseweb="slider"] { 
+                        direction: ltr; 
+                    }
+                `;
+                parentDoc.head.appendChild(style);
+            }
+        </script>
+        """,
+        width=0,
+        height=0,
+    )
+
+
+set_rtl_direction()
+
+st.title("מחשבון פנסיה מתקדם", text_alignment="right")
+
+st.title(f" פרישה בגיל 67, גיל נוכחי {current_age}", text_alignment="right")
+
+
+# Main calculation function
+def calculate_pension(
+    current_age: int,
+    balance: float,
+    monthly_dep: float,
+    annual_return_pct: float,
+    inflation_pct: float,
+    manual_coefficient: float,
+    health_tax_input: float,
+    ni_benefit: float,
+):
     retire_age = 67
     years_to_retire = retire_age - current_age
     if years_to_retire <= 0:
         st.error("הגיל חייב להיות נמוך מגיל הפרישה")
         return
 
-    def get_trajectory(yield_pct):
+    def get_trajectory(yield_pct: float):
         m_return = (yield_pct / 100) / 12
-        months = years_to_retire * 12
+        months = int(years_to_retire * 12)
         bals = [balance]
         prins = [balance]
         curr_bal = balance
@@ -54,13 +95,13 @@ def calculate_pension(current_age, balance, monthly_dep, annual_return_pct, infl
             bals.append(curr_bal)
             prins.append(curr_prin)
         return np.array(bals), np.array(prins)
-    
-    def calculate_pension_tax(gross_pension):
-        # נתוני 2026 (משוערים לפי הצמדה למדד)
-        exemption_sum = 6318  # 67% מתקרת הקצבה המזכה
+
+    def calculate_pension_tax(gross_pension: float) -> float:
+        # 2026 Data (Estimated by index linkage)
+        exemption_sum = 6318  # 67% of the qualifying allowance ceiling
         taxable_pension = max(0, gross_pension - exemption_sum)
-        
-        # מדרגות מס חודשיות (לפי הערכת 2026)
+
+        # Monthly tax brackets (2026 estimate)
         tax = 0
         if taxable_pension <= 7010:
             tax = taxable_pension * 0.10
@@ -69,121 +110,354 @@ def calculate_pension(current_age, balance, monthly_dep, annual_return_pct, infl
         elif taxable_pension <= 16150:
             tax = (7010 * 0.10) + (3050 * 0.14) + (taxable_pension - 10060) * 0.20
         else:
-            # מדרגות גבוהות יותר...
-            tax = (7010 * 0.10) + (3050 * 0.14) + (6090 * 0.20) + (taxable_pension - 16150) * 0.31
+            # Higher brackets...
+            tax = (
+                (7010 * 0.10)
+                + (3050 * 0.14)
+                + (6090 * 0.20)
+                + (taxable_pension - 16150) * 0.31
+            )
 
-        # נקודות זיכוי (2.25 נקודות זיכוי בסיסיות לגבר)
-        credit_point_value = 250 # ערך נקודה ב-2026 (משוער)
+        # Credit points (2.25 basic credit points for a man)
+        credit_point_value = 250  # Point value in 2026 (estimated)
         total_credits = 2.25 * credit_point_value
-        
+
         final_tax = max(0, tax - total_credits)
         return final_tax
 
-    def get_net_pension(f_bal, coeff, infl_pct):
+    def get_net_pension(f_bal: float, coeff: float, infl_pct: float):
         gross_pension = f_bal / coeff
         total_g = gross_pension + ni_benefit
-        t = calculate_pension_tax(total_g)      
+        t = calculate_pension_tax(total_g)
         net = total_g - t - health_tax_input
         real_net = net / ((1 + (infl_pct / 100)) ** years_to_retire)
         return net, t, gross_pension, ni_benefit, health_tax_input, real_net
 
     user_balances, user_principals = get_trajectory(annual_return_pct)
     future_balance = user_balances[-1]
-    net_pension, tax, gross_pension_fund, ni, health, real_val = get_net_pension(future_balance, manual_coefficient, inflation_pct)
+    net_pension, tax, gross_pension_fund, ni, health, real_val = get_net_pension(
+        future_balance, manual_coefficient, inflation_pct
+    )
 
+    # Display data in Streamlit
 
-
-    # הצגת נתונים ב-Streamlit
-    
-    # col1, col2 = st.columns(2)
-    # col1.header("תמצית תחזית פרישה", divider=True )
-    col1, = st.columns(1)
-    col1.header("תמצית תחזית פרישה", divider=True )    
+    (col1,) = st.columns(1)
+    col1.header("תמצית תחזית פרישה", divider=True, text_alignment="right")
 
     col1, col2, col3 = st.columns(3)
     col1.metric("צבירה בפרישה (נומינלי)", f"{future_balance:,.0f} ₪")
     col2.metric("קצבת פנסיה (ברוטו)", f"{gross_pension_fund:,.0f} ₪")
-    
-    col1, = st.columns(1)
-    col1.header("", divider=True )   
+
+    (col1,) = st.columns(1)
+    col1.header("", divider=True)
 
     col1, col2, col3 = st.columns(3)
     col1.metric("מס הכנסה משוער", f"{tax:,.0f} ₪")
     col2.metric("קצבת נטו חודשית", f"{net_pension:,.0f} ₪")
-    col3.metric("ערך ריאלי (כוח קנייה היום)", f"{real_val:,.0f} ₪",border=True)    
-
-    
+    col3.metric("ערך ריאלי (כוח קנייה היום)", f"{real_val:,.0f} ₪", border=True)
 
     st.markdown("---")
-    st.subheader("ניתוח ויזואלי")
+    st.subheader("ניתוח ויזואלי", text_alignment="right")
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    (ax1, ax2), (ax3, ax4) = axes
+    # Prepare Layout
+    chart_row1_col1, chart_row1_col2 = st.columns(2)
+    chart_row2_col1, chart_row2_col2 = st.columns(2)
+
     years_arr = np.linspace(current_age, retire_age, len(user_balances))
 
-    # גרף 1: צמיחה
+    # Graph 1: Growth
+    # Prepare Data
     yield_range = np.arange(annual_return_pct - 1.5, annual_return_pct + 1.6, 0.5)
+    growth_data = []
+
     for y in yield_range:
         bals, _ = get_trajectory(y)
         is_user = np.isclose(y, annual_return_pct)
-        line, = ax1.plot(years_arr, bals / 1_000_000, label=f"{y:.1f}%", linewidth=3 if is_user else 1, alpha=0.8 if is_user else 0.4, color='teal' if is_user else 'gray')
-        ax1.text(years_arr[-1], bals[-1]/1_000_000, f" {y:.1f}%", color=line.get_color(), va='center', fontweight='bold' if is_user else 'normal')
-        if is_user: ax1.fill_between(years_arr, bals / 1_000_000, color='teal', alpha=0.1)
-    ax1.fill_between(years_arr, user_principals / 1_000_000, color='#4682B4', alpha=0.3, label=fix_heb('קרן (הפקדות)'))
-    ax1.set_title(fix_heb("צמיחת צבירה: רגישות לתשואה והרכב קרן"))
-    ax1.set_ylabel(fix_heb("מליון ₪"))
-    ax1.legend(loc='upper left')
+        label_str = f"{y:.1f}%"
+        for i, val in enumerate(bals):
+            growth_data.append(
+                {
+                    "Year": years_arr[i],
+                    "Amount": val / 1_000_000,
+                    "Yield": label_str,
+                    "IsUser": is_user,
+                    "Type": "Forecast",
+                }
+            )
 
-    # גרף 2: עוגה
-    labels_pie = [fix_heb('נטו פנסיה'), fix_heb('ביטוח לאומי'), fix_heb('מס הכנסה'), fix_heb('דמי בריאות')]
+    # Add Principal Data
+    for i, val in enumerate(user_principals):
+        growth_data.append(
+            {
+                "Year": years_arr[i],
+                "Amount": val / 1_000_000,
+                "Yield": "Principal",
+                "IsUser": False,
+                "Type": "Principal",
+            }
+        )
+
+    df_growth = pd.DataFrame(growth_data)
+
+    # Build Chart 1
+    base_growth = alt.Chart(df_growth).encode(x=alt.X("Year", title="גיל"))
+
+    # Layer 1: Principal Area
+    area_principal = (
+        base_growth.transform_filter(alt.datum.Type == "Principal")
+        .mark_area(color="#4682B4", opacity=0.3)
+        .encode(y=alt.Y("Amount", title="מליון ₪"))
+    )
+
+    # Layer 2: User Confidence Area (Fill under user line)
+    area_user = (
+        base_growth.transform_filter(alt.datum.IsUser)
+        .mark_area(color="teal", opacity=0.1)
+        .encode(y="Amount")
+    )
+
+    # Layer 3: Lines
+    lines_growth = (
+        base_growth.transform_filter(alt.datum.Type == "Forecast")
+        .mark_line()
+        .encode(
+            y="Amount",
+            color=alt.condition(alt.datum.IsUser, alt.value("teal"), alt.value("gray")),
+            strokeWidth=alt.condition(alt.datum.IsUser, alt.value(3), alt.value(1)),
+            opacity=alt.condition(alt.datum.IsUser, alt.value(0.8), alt.value(0.4)),
+            detail="Yield",
+        )
+    )
+
+    # Layer 4: Text Labels at the end
+    base_text_layer = base_growth.transform_filter(
+        alt.datum.Type == "Forecast"
+    ).transform_filter(f"datum.Year >= {years_arr[-1] - 0.01}")
+
+    text_growth_user = (
+        base_text_layer.transform_filter(alt.datum.IsUser)
+        .mark_text(align="left", dx=5, fontWeight="bold")
+        .encode(y="Amount", text="Yield", color=alt.value("teal"))
+    )
+
+    text_growth_others = (
+        base_text_layer.transform_filter(alt.datum.IsUser == False)
+        .mark_text(align="left", dx=5, fontWeight="normal")
+        .encode(y="Amount", text="Yield", color=alt.value("gray"))
+    )
+
+    chart1 = (
+        (
+            area_principal
+            + area_user
+            + lines_growth
+            + text_growth_user
+            + text_growth_others
+        )
+        .properties(title="צמיחת צבירה: רגישות לתשואה והרכב קרן", width=600, height=450)
+        .interactive()
+    )
+
+    with chart_row1_col1:
+        st.altair_chart(chart1)
+
+    # Graph 2: Pie Chart
+    # Matplotlib used fixed colors and calculated slices
     sizes_pie = [gross_pension_fund - tax - health, ni, tax, health]
-    ax2.pie(sizes_pie, labels=labels_pie, autopct='%1.1f%%', startangle=140, colors=['#99ff99', '#87CEEB', '#FFC0CB', '#FFA500'])
-    ax2.set_title(fix_heb("התפלגות קצבה חודשית ברוטו"))
+    labels_pie = ["נטו פנסיה", "ביטוח לאומי", "מס הכנסה", "דמי בריאות"]
+    colors_pie = ["#99ff99", "#87CEEB", "#FFC0CB", "#FFA500"]
 
-    # גרף 3: אינפלציה
+    df_pie = pd.DataFrame(
+        {"Category": labels_pie, "Value": sizes_pie, "Color": colors_pie}
+    )
+    # Calculate percentage for labels
+    total_pie = sum(sizes_pie)
+    df_pie["Percent"] = (df_pie["Value"] / total_pie).map("{:.1%}".format)
+
+    base_pie = alt.Chart(df_pie).encode(theta=alt.Theta("Value", stack=True))
+
+    pie_arc = base_pie.mark_arc(outerRadius=100).encode(
+        color=alt.Color(
+            "Category",
+            scale=alt.Scale(domain=labels_pie, range=colors_pie),
+            legend=alt.Legend(title="מרכיבי ההכנסה"),
+        ),
+        order=alt.Order("Value", sort="descending"),
+        tooltip=["Category", "Value", "Percent"],
+    )
+
+    pie_text = base_pie.mark_text(radius=120).encode(
+        text="Percent",
+        order=alt.Order("Value", sort="descending"),
+        color=alt.value("white"),
+    )
+
+    chart2 = (pie_arc + pie_text).properties(
+        title="התפלגות קצבה חודשית ברוטו", width=600, height=450
+    )
+
+    with chart_row1_col2:
+        st.altair_chart(chart2)
+
+    # Graph 3: Inflation
     inflations = np.linspace(1.5, 3.0, 10)
+    infl_data = []
     for c in [200, 210, 215, 220]:
         nets = [get_net_pension(future_balance, c, i)[5] for i in inflations]
-        line, = ax3.plot(inflations, nets, label=f"{c} - {fix_heb('מקדם')}", alpha=0.5)
-        ax3.text(inflations[-1], nets[-1], f" {c}", color=line.get_color(), va='center')
-    user_nets = [get_net_pension(future_balance, manual_coefficient, i)[5] for i in inflations]
-    ax3.plot(inflations, user_nets, color='red', linewidth=3, linestyle='--')
-    ax3.axvline(x=inflation_pct, color='black', linestyle=':')
-    ax3.set_title(fix_heb("רגישות: קצבה ריאלית מול אינפלציה (רגישות למקדם)"))
-    ax3.legend()
+        for i, val in enumerate(nets):
+            infl_data.append(
+                {
+                    "Inflation": inflations[i],
+                    "Net": val,
+                    "Label": f"{c}",
+                    "Coeff": str(c),
+                    "Type": "Scenario",
+                }
+            )
 
-    # גרף 4: תשואה
+    user_nets = [
+        get_net_pension(future_balance, manual_coefficient, i)[5] for i in inflations
+    ]
+    for i, val in enumerate(user_nets):
+        infl_data.append(
+            {
+                "Inflation": inflations[i],
+                "Net": val,
+                "Label": "User",
+                "Coeff": "User",
+                "Type": "User",
+            }
+        )
+
+    df_infl = pd.DataFrame(infl_data)
+    infl_min = inflations[0]
+    infl_max = inflations[-1]
+    infl_domain_max = infl_max + (infl_max - infl_min) * 0.01
+    base_infl = alt.Chart(df_infl).encode(
+        x=alt.X(
+            "Inflation",
+            title="אינפלציה (%)",
+            scale=alt.Scale(domain=[infl_min, infl_domain_max]),
+        )
+    )
+
+    lines_infl = (
+        base_infl.transform_filter(alt.datum.Type == "Scenario")
+        .mark_line(opacity=0.5)
+        .encode(
+            y=alt.Y("Net", title="קצבה ריאלית", scale=alt.Scale(zero=False)),
+            color=alt.Color("Label", legend=alt.Legend(title="מקדמים")),
+        )
+    )
+
+    text_infl = (
+        base_infl.transform_filter(alt.datum.Type == "Scenario")
+        .transform_filter(f"datum.Inflation >= {inflations[-1] - 0.01}")
+        .mark_text(align="left", dx=5)
+        .encode(y="Net", text="Coeff", color="Label")
+    )
+
+    user_line_infl = (
+        base_infl.transform_filter(alt.datum.Type == "User")
+        .mark_line(color="red", strokeDash=[5, 5], strokeWidth=3)
+        .encode(y="Net")
+    )
+
+    curr_infl_rule = (
+        alt.Chart(pd.DataFrame({"x": [inflation_pct]}))
+        .mark_rule(strokeDash=[5, 5], color="white")
+        .encode(x="x")
+    )
+
+    chart3 = (
+        (lines_infl + text_infl + user_line_infl + curr_infl_rule)
+        .properties(
+            title="רגישות: קצבה ריאלית מול אינפלציה (רגישות למקדם)",
+            width=600,
+            height=450,
+        )
+        .interactive()
+    )
+
+    with chart_row2_col1:
+        st.altair_chart(chart3)
+
+    # Graph 4: Yield
     yield_range_fine = np.linspace(annual_return_pct - 1.5, annual_return_pct + 1.5, 20)
+    yield_sens_data = []
+
     for inf in [1.5, 2.0, 2.5, 3.0]:
         is_target = np.isclose(inf, inflation_pct, atol=0.25)
-        y_real_nets = [get_net_pension(get_trajectory(y_pct)[0][-1], manual_coefficient, inf)[5] for y_pct in yield_range_fine]
-        line, = ax4.plot(yield_range_fine, y_real_nets, label=f"{inf}% - {fix_heb('אינפלציה שנתית ממוצעת')}", linewidth=3 if is_target else 1)
-        ax4.text(yield_range_fine[-1], y_real_nets[-1], f" {inf}%", color=line.get_color(), va='center')
-    ax4.axvline(x=annual_return_pct, color='black', linestyle='--')
-    ax4.set_title(fix_heb("רגישות: קצבה ריאלית מול תשואה (רדישות לאינפלציה)"))
-    ax4.legend()
+        y_real_nets = [
+            get_net_pension(get_trajectory(y_pct)[0][-1], manual_coefficient, inf)[5]
+            for y_pct in yield_range_fine
+        ]
+        label_t = f"{inf}%"
+        for i, val in enumerate(y_real_nets):
+            yield_sens_data.append(
+                {
+                    "Yield": yield_range_fine[i],
+                    "Net": val,
+                    "Inflation": inf,
+                    "Label": f"{inf}%",
+                    "IsTarget": is_target,
+                    "Tag": label_t,
+                }
+            )
 
-    plt.tight_layout()
-    st.pyplot(fig)
+    df_yield_sens = pd.DataFrame(yield_sens_data)
 
-# הפעלה
-calculate_pension(curr_Age, curr_Fund_Total, monthly_Deposit, year_Yield, inflation, projected_Coeff, health_Tax, national_Security)
+    yield_min = yield_range_fine[0]
+    yield_max = yield_range_fine[-1]
+    yield_domain_max = yield_max + (yield_max - yield_min) * 0.05
+    base_yield = alt.Chart(df_yield_sens).encode(
+        x=alt.X(
+            "Yield",
+            title="תשואה שנתית (%)",
+            scale=alt.Scale(domain=[yield_min, yield_domain_max]),
+        )
+    )
+
+    lines_yield = base_yield.mark_line().encode(
+        y=alt.Y("Net", title="קצבה ריאלית", scale=alt.Scale(zero=False)),
+        color=alt.Color("Label", legend=alt.Legend(title="אינפלציה")),
+        strokeWidth=alt.condition(alt.datum.IsTarget, alt.value(3), alt.value(1)),
+    )
+
+    text_yield = (
+        base_yield.transform_filter(f"datum.Yield >= {yield_range_fine[-1] - 0.01}")
+        .mark_text(align="left", dx=5)
+        .encode(y="Net", text="Tag", color="Label")
+    )
+
+    curr_yield_rule = (
+        alt.Chart(pd.DataFrame({"x": [annual_return_pct]}))
+        .mark_rule(strokeDash=[5, 5], color="white")
+        .encode(x="x")
+    )
+
+    chart4 = (
+        (lines_yield + text_yield + curr_yield_rule)
+        .properties(
+            title="רגישות: קצבה ריאלית מול תשואה (רגישות לאינפלציה)",
+            width=600,
+            height=450,
+        )
+        .interactive()
+    )
+
+    with chart_row2_col2:
+        st.altair_chart(chart4)
 
 
-import streamlit as st
-import matplotlib.pyplot as plt
-import numpy as np
-# שים לב: באפליקציית WEB חיצונית מומלץ להשתמש בגופנים שתומכים בעברית מובנית במקום arabic_reshaper אם אפשר
-
-#st.title("מחשבון פנסיה מתקדם")
-
-# יצירת סרגל צד לנתונים
-#with st.sidebar:
-#    st.header("נתוני כניסה")
-#    current_age = st.number_input("גיל נוכחי", value=46, key=1)
-#    balance = st.number_input("צבירה קיימת", value=1800000, key=2)
-#    monthly_dep = st.number_input("הפקדה חודשית", value=7800, key=3)
-    # ... שאר הפרמטרים באותו אופן
-
-# כאן מכניסים את הלוגיקה של הפונקציה calculate_pension_colab
-# ובמקום plt.show() משתמשים ב-st.pyplot(fig)
+# Execution
+calculate_pension(
+    current_age,
+    current_fund_total,
+    monthly_deposit,
+    annual_yield,
+    inflation_rate,
+    projected_coefficient,
+    health_tax,
+    national_insurance,
+)
